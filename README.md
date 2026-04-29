@@ -1,48 +1,92 @@
-# Open Home Foundation Matter Server
+# Matter Controller Server
 
-![Matter Logo](docs/matter_logo.svg)
+This project is a custom development and extension based on the **[Open Home Foundation Matter Server](https://github.com/matter-js/python-matter-server)**, which is an officially certified Software Component to create a Matter controller.
 
-The Open Home Foundation Matter Server is an [officially certified](https://csa-iot.org/csa_product/open-home-foundation-matter-server/) Software Component to create a Matter controller. It serves as the foundation to provide Matter support to [Home Assistant](https://home-assistant.io) but its universal approach makes it suitable to be used in other projects too.
+While the upstream project serves as the foundation to provide Matter support to Home Assistant, this repository extends that foundation into a versatile, standalone Matter Controller Server. It is designed to allow multiple frontends, applications, and services to interact with a single Matter fabric over a centralized WebSocket API.
 
-This project implements a Matter Controller Server over WebSockets using the
-[official Matter (formerly CHIP) SDK](https://github.com/project-chip/connectedhomeip)
-as a base and provides both a server and client implementation.
+## What This Project Does
 
-> [!IMPORTANT]
-> We’re excited to share that the Matter Server is being rewritten on top of [matter.js](https://github.com/matter-js/matter.js)! 🎉
-> This means that the current project has moved into **maintenance mode** — we’ll still fix important bugs if they come up, but all new features will land in the new project instead.
-> We’ll post a link as soon as the first **alpha version** is ready for you to try out. 🚀
+At a high level, this project acts as a Matter controller backend that:
+- Runs and owns a Matter fabric/controller context.
+- Stores commissioned device information and controller state persistently.
+- Exposes a WebSocket API (`/ws`) for external consumers.
+- Allows multiple clients to interact with the same Matter fabric simultaneously.
+- Supports commissioning, device control, attribute reads/writes, and event streaming.
 
-The Open Home Foundation Matter Server software component is funded by [Nabu Casa](https://www.nabucasa.com/) (a member of the CSA) and donated to [The Open Home Foundation](https://www.openhomefoundation.org/).
+Instead of embedding the Matter stack directly into your frontend, this server centralizes the Matter operations, making it easy to build custom Home Assistant integrations, web dashboards, mobile apps (e.g., Flutter, Android, iOS), or automated test harnesses.
 
-## Support
+## System Architecture
 
-For developers, making use of this component or contributing to it, use the issue tracker within this repository and/or reach out on discord.
+The integration model separates the UI from the controller logic:
 
-For users of Home Assistant, seek support in the official Home Assistant support channels.
+`Frontend / App / Automation Platform -> WebSocket API -> Matter Server -> Matter Devices`
 
-- The Home Assistant [Community Forum](https://community.home-assistant.io/).
-- The Home Assistant [Discord Chat Server](https://discord.gg/c5DvZ4e).
-- Join [the Reddit subreddit in /r/homeassistant](https://reddit.com/r/homeassistant).
+This architecture ensures that the Matter fabric remains online even if frontends disconnect, and it simplifies frontend development since the heavy lifting of the Matter SDK is handled by this server.
 
-- If you experience issues using Matter with Home Assistant, please open an issue
-  report in the [Home Assistant Core repository](https://github.com/home-assistant/core/issues/new/choose).
+## Getting Started
 
-Please do not create Home Assistant enduser support issues in the issue tracker of this repository.
+### Prerequisites
 
-## Development
+- **OS:** 64-bit Linux is strongly recommended for production and containerized deployments (due to host networking requirements for Matter). macOS is supported for development. Windows/WSL is not supported for the Matter server runtime.
+- **Network:** IPv6, link-local multicast, and mDNS/zeroconf must be supported on your local network.
 
-Want to help out with development, testing, and/or documentation? Great! As both this project and Matter keeps evolving there will be a lot to improve. Reach out to us on discord if you want to help out.
+### Running with Docker
 
-[Development documentation](DEVELOPMENT.md)
+The easiest way to run the Matter Server is using Docker with host networking.
 
-## Installation / Running the Matter Server
+**Minimal Run (Persistent Storage):**
+```sh
+mkdir -p data
 
-- Endusers of Home Assistant, refer to the [Home Assistant documentation](https://www.home-assistant.io/integrations/matter/) how to run Matter in Home Assistant using the official Matter Server add-on, which is based on this project.
+docker run -d \
+  --name matter-server \
+  --restart=unless-stopped \
+  --security-opt apparmor=unconfined \
+  -v "$(pwd)/data:/data" \
+  --network=host \
+  ghcr.io/matter-js/python-matter-server:stable
+```
 
-- For running the server and/or client in your development environment, see the [Development documentation](DEVELOPMENT.md).
+**Run with Bluetooth Commissioning Support:**
+If your host machine has a Bluetooth adapter and you want to use BLE for commissioning, mount the D-Bus socket:
+```sh
+mkdir -p data
 
-- For running the Matter Server as a standalone docker container, see our instructions [here](docs/docker.md).
+docker run -d \
+  --name matter-server \
+  --restart=unless-stopped \
+  --security-opt apparmor=unconfined \
+  -v "$(pwd)/data:/data" \
+  -v /run/dbus:/run/dbus:ro \
+  --network=host \
+  ghcr.io/matter-js/python-matter-server:stable \
+  --storage-path /data \
+  --paa-root-cert-dir /data/credentials \
+  --bluetooth-adapter 0
+```
 
-> [!NOTE]
-> Both Matter and this implementation are in an early state and features are probably missing or could be improved. See our [development notes](#development) how you can help out, with development and/or testing.
+## Connecting a Frontend
+
+Once the server is running, any WebSocket-capable client can connect to it on port `5580`.
+
+**Connection URL:**
+- Local: `ws://localhost:5580/ws`
+- LAN: `ws://<server-ip>:5580/ws`
+
+**Basic Flow:**
+1. Open the WebSocket connection.
+2. Parse the initial `ServerInfoMessage` to verify schema compatibility.
+3. Send a `start_listening` command to initialize the client state stream.
+4. Issue commands (e.g., `get_nodes`, `commission_with_code`, `device_command`).
+5. Listen for events (e.g., `node_updated`, `attribute_updated`).
+
+For specific domain integrations, such as **EV Chargers**, the server supports detailed clusters like `EnergyEvse`, `DeviceEnergyManagement`, and telemetry clusters to build rich dashboards and control flows.
+
+## Documentation
+
+For a comprehensive guide on integrating with this project, supported commands, and architectural constraints, please refer to the **[Developer Integration Guide](docs/project-overview-developer.md)**.
+
+## Support & Contributions
+
+- If you are looking to contribute or understand the core Matter SDK implementation, refer to the [upstream project](https://github.com/matter-js/python-matter-server).
+- For issues related to this specific extension and architecture, please use the issue tracker in this repository.
