@@ -76,7 +76,9 @@ def get_cluster_name(cluster_id: int) -> str:
     return CLUSTER_NAMES.get(cluster_id, f"Cluster_0x{cluster_id:04X}")
 
 
-def get_attribute_name(cluster_id: int, attr_id: int, custom_names: dict[str, str] | None) -> str:
+def get_attribute_name(
+    cluster_id: int, attr_id: int, custom_names: dict[str, str] | None
+) -> str:
     """Return human-readable attribute name."""
     if custom_names:
         key = f"0x{attr_id:04X}"
@@ -274,11 +276,16 @@ def fetch_node_files_from_matter_server(
     async def _run() -> list[Path]:
         try:
             import aiohttp  # type: ignore[import-not-found]
-            from matter_server.client.client import MatterClient  # type: ignore[import-not-found]
+
+            from matter_server.client.client import (
+                MatterClient,  # type: ignore[import-not-found]
+            )
             from matter_server.common.helpers.util import (  # type: ignore[import-not-found]
                 dataclass_to_dict,
             )
-            from matter_server.common.models import APICommand  # type: ignore[import-not-found]
+            from matter_server.common.models import (
+                APICommand,  # type: ignore[import-not-found]
+            )
         except ImportError as err:  # pragma: no cover
             raise RuntimeError(
                 "Cannot import python-matter-server client dependencies. "
@@ -335,8 +342,14 @@ def compare_device(
     an 'ha_mapped' flag and optional 'ha_platform'/'ha_entity' detail.
     """
     if ha_map is None:
-        ha_map = {"attrs": set(), "cmds": set(), "events": set(),
-                  "attrs_detail": {}, "cmds_detail": {}, "events_detail": {}}
+        ha_map = {
+            "attrs": set(),
+            "cmds": set(),
+            "events": set(),
+            "attrs_detail": {},
+            "cmds_detail": {},
+            "events_detail": {},
+        }
 
     attributes = device.get("attributes", {})
     endpoints = extract_endpoints(attributes)
@@ -391,9 +404,7 @@ def compare_device(
                 missing.append(entry)
 
         for cmd_id in spec.get("command_ids", []):
-            cmd_name = spec.get("command_names", {}).get(
-                cmd_id, f"Cmd_0x{cmd_id:04X}"
-            )
+            cmd_name = spec.get("command_names", {}).get(cmd_id, f"Cmd_0x{cmd_id:04X}")
             endpoints_with_cmd: list[int] = []
             command_list_attr = (
                 GENERATED_COMMAND_LIST_ATTR
@@ -433,9 +444,7 @@ def compare_device(
                 missing.append(cmd_entry)
 
         for evt_id in spec.get("event_ids", []):
-            evt_name = spec.get("event_names", {}).get(
-                evt_id, f"Event_0x{evt_id:04X}"
-            )
+            evt_name = spec.get("event_names", {}).get(evt_id, f"Event_0x{evt_id:04X}")
             endpoints_with_evt: list[int] = []
             for ep_id in endpoints:
                 evt_list_path = f"{ep_id}/{cluster_id}/{EVENT_LIST_ATTR}"
@@ -474,7 +483,9 @@ def compare_device(
     ha_missing_from_present = sum(1 for e in present if not e.get("ha_mapped"))
     return {
         "node_id": node_id,
-        "node_id_hex": to_hex(node_id, width=4) if isinstance(node_id, int) else f"{node_id}",
+        "node_id_hex": to_hex(node_id, width=4)
+        if isinstance(node_id, int)
+        else f"{node_id}",
         "source": device.get("source", ""),
         "endpoints_found": endpoints,
         "endpoints_found_hex": [to_hex(ep) for ep in endpoints],
@@ -505,7 +516,9 @@ def _item_label(entry: dict[str, Any]) -> str:
     if entry.get("type") == "cmd":
         return f"[Cmd]  {cname} ({chex}) | {entry['command_name']} ({entry['command_id_hex']})"
     if entry.get("type") == "evt":
-        return f"[Evt]  {cname} ({chex}) | {entry['event_name']} ({entry['event_id_hex']})"
+        return (
+            f"[Evt]  {cname} ({chex}) | {entry['event_name']} ({entry['event_id_hex']})"
+        )
     return f"[Attr] {cname} ({chex}) | {entry['attribute_name']} ({entry['attribute_id_hex']})"
 
 
@@ -540,12 +553,14 @@ def format_result_text(result: dict[str, Any], desired_desc: str) -> str:
         label = _item_label(p)
         lines.append(f"  {label} → ep {eps}")
 
-    lines.extend([
-        "",
-        "-" * 80,
-        "MISSING (Matter 缺):",
-        "-" * 80,
-    ])
+    lines.extend(
+        [
+            "",
+            "-" * 80,
+            "MISSING (Matter 缺):",
+            "-" * 80,
+        ]
+    )
 
     for m in result["missing"]:
         lines.append(f"  {_item_label(m)}")
@@ -559,20 +574,22 @@ def format_result_text(result: dict[str, Any], desired_desc: str) -> str:
     missing_ha_yes = [e for e in result["missing"] if e.get("ha_mapped")]
     missing_ha_no = [e for e in result["missing"] if not e.get("ha_mapped")]
 
-    lines.extend([
-        "",
-        "",
-        "=" * 80,
-        "Part 2 — Home Assistant Entity Mapping  (HA 有/缺)",
-        "=" * 80,
-        f"HA Summary (of {summary['present_count']} Matter-present items):",
-        f"  HA mapped   : {ha_mapped_count}",
-        f"  HA unmapped : {ha_unmapped_count}",
-        "",
-        "-" * 80,
-        f"Matter:present + HA:yes  ({len(present_ha_yes)})  — device 有 + HA 有 mapping",
-        "-" * 80,
-    ])
+    lines.extend(
+        [
+            "",
+            "",
+            "=" * 80,
+            "Part 2 — Home Assistant Entity Mapping  (HA 有/缺)",
+            "=" * 80,
+            f"HA Summary (of {summary['present_count']} Matter-present items):",
+            f"  HA mapped   : {ha_mapped_count}",
+            f"  HA unmapped : {ha_unmapped_count}",
+            "",
+            "-" * 80,
+            f"Matter:present + HA:yes  ({len(present_ha_yes)})  — device 有 + HA 有 mapping",
+            "-" * 80,
+        ]
+    )
     for e in present_ha_yes:
         eps = e.get("endpoints_hex", e.get("endpoints", []))
         platform = e.get("ha_platform", "")
@@ -581,22 +598,26 @@ def format_result_text(result: dict[str, Any], desired_desc: str) -> str:
         ha_info = f"[{platform}] {entity}" if platform else ""
         lines.append(f"  {label}  →  {ha_info}")
 
-    lines.extend([
-        "",
-        "-" * 80,
-        f"Matter:present + HA:no   ({len(present_ha_no)})  — device 有, 但 HA 缺 mapping ⚠",
-        "-" * 80,
-    ])
+    lines.extend(
+        [
+            "",
+            "-" * 80,
+            f"Matter:present + HA:no   ({len(present_ha_no)})  — device 有, 但 HA 缺 mapping ⚠",
+            "-" * 80,
+        ]
+    )
     for e in present_ha_no:
         eps = e.get("endpoints_hex", e.get("endpoints", []))
         lines.append(f"  {_item_label(e)}  →  ep {eps}")
 
-    lines.extend([
-        "",
-        "-" * 80,
-        f"Matter:missing + HA:yes  ({len(missing_ha_yes)})  — device 缺, 但 HA 有 mapping",
-        "-" * 80,
-    ])
+    lines.extend(
+        [
+            "",
+            "-" * 80,
+            f"Matter:missing + HA:yes  ({len(missing_ha_yes)})  — device 缺, 但 HA 有 mapping",
+            "-" * 80,
+        ]
+    )
     if missing_ha_yes:
         for e in missing_ha_yes:
             platform = e.get("ha_platform", "")
@@ -606,12 +627,14 @@ def format_result_text(result: dict[str, Any], desired_desc: str) -> str:
     else:
         lines.append("  (none)")
 
-    lines.extend([
-        "",
-        "-" * 80,
-        f"Matter:missing + HA:no   ({len(missing_ha_no)})  — device 缺 + HA 缺 mapping",
-        "-" * 80,
-    ])
+    lines.extend(
+        [
+            "",
+            "-" * 80,
+            f"Matter:missing + HA:no   ({len(missing_ha_no)})  — device 缺 + HA 缺 mapping",
+            "-" * 80,
+        ]
+    )
     if missing_ha_no:
         for e in missing_ha_no:
             lines.append(f"  {_item_label(e)}")
@@ -636,7 +659,9 @@ def _entry_to_csv_row(entry: dict[str, Any], matter_ready: bool) -> dict[str, st
         description = entry.get("event_name", "")
     else:
         type_label = "Attr"
-        item_id_hex = entry.get("attribute_id_hex", to_hex(entry.get("attribute_id", 0)))
+        item_id_hex = entry.get(
+            "attribute_id_hex", to_hex(entry.get("attribute_id", 0))
+        )
         description = entry.get("attribute_name", "")
     ha_ready = entry.get("ha_mapped", False)
     entity_class = entry.get("ha_entity_class", "") if ha_ready else ""
@@ -660,7 +685,16 @@ def result_to_csv(result: dict[str, Any], out_path: Path) -> None:
     Matter ready (bool), HA ready (bool), Supported (HA ready implies True),
     Entity class.
     """
-    fieldnames = ["Cluster Id", "Type", "Id", "Description", "Matter ready", "HA ready", "Supported", "Entity class"]
+    fieldnames = [
+        "Cluster Id",
+        "Type",
+        "Id",
+        "Description",
+        "Matter ready",
+        "HA ready",
+        "Supported",
+        "Entity class",
+    ]
     rows: list[dict[str, str]] = []
     for p in result["present"]:
         rows.append(_entry_to_csv_row(p, matter_ready=True))
@@ -674,6 +708,7 @@ def result_to_csv(result: dict[str, Any], out_path: Path) -> None:
 
 def result_to_hex_only(result: dict[str, Any]) -> dict[str, Any]:
     """Convert result to hex-only format for JSON output."""
+
     def entry_hex(e: dict[str, Any]) -> dict[str, Any]:
         out: dict[str, Any] = {
             "type": e.get("type", "attr"),
@@ -696,6 +731,7 @@ def result_to_hex_only(result: dict[str, Any]) -> dict[str, Any]:
             out["ha_platform"] = e.get("ha_platform", "")
             out["ha_entity"] = e.get("ha_entity", "")
         return out
+
     return {
         "node_id": result.get("node_id_hex", result["node_id"]),
         "source": result.get("source", ""),
@@ -787,9 +823,13 @@ def main() -> None:
         attr_count = len(ha_map["attrs"])
         cmd_count = len(ha_map["cmds"])
         evt_count = len(ha_map["events"])
-        print(f"Loaded HA mapping: {attr_count} attrs, {cmd_count} cmds, {evt_count} events")
+        print(
+            f"Loaded HA mapping: {attr_count} attrs, {cmd_count} cmds, {evt_count} events"
+        )
     else:
-        print(f"Warning: HA mapping file not found: {args.ha_mapping} (HA column will show 'no' for all)")
+        print(
+            f"Warning: HA mapping file not found: {args.ha_mapping} (HA column will show 'no' for all)"
+        )
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -815,10 +855,12 @@ def main() -> None:
         if snapshots.exists():
             device_files = find_device_files(snapshots)
         else:
-            device_files = find_device_files(Path("."))
+            device_files = find_device_files(Path())
 
     if not device_files:
-        print("No device files found. Use --input-dir or --input-file to specify device data.")
+        print(
+            "No device files found. Use --input-dir or --input-file to specify device data."
+        )
         print("Device files must be JSON with 'node_id' and 'attributes' keys.")
         return 1
 
@@ -851,7 +893,9 @@ def main() -> None:
             result_to_csv(result, csv_path)
             print(f"Wrote {csv_path}")
 
-    print(f"\nDone. Processed {len(device_files)} device(s), results in {args.output_dir}/")
+    print(
+        f"\nDone. Processed {len(device_files)} device(s), results in {args.output_dir}/"
+    )
     return 0
 
 

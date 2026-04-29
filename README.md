@@ -1,6 +1,6 @@
 # Matter Controller Server
 
-This project is a custom development and extension based on the **[Open Home Foundation Matter Server](https://github.com/matter-js/python-matter-server)**, which is an officially certified Software Component to create a Matter controller. 
+This project is a custom development and extension based on the **[Open Home Foundation Matter Server](https://github.com/matter-js/python-matter-server)**, which is an officially certified Software Component to create a Matter controller.
 
 While the upstream project serves as the foundation to provide Matter support to Home Assistant, this repository extends that foundation into a versatile, standalone Matter Controller Server. It is designed to allow multiple frontends, applications, and services to interact with a single Matter fabric over a centralized WebSocket API.
 

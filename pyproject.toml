@@ -142,9 +142,11 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 fix = true
+force-exclude = true
 line-length = 88
 show-fixes = true
 target-version = "py311"
+extend-exclude = ["docs/compare_desired_device.py"]
 
 [tool.ruff.lint.pydocstyle]
 # Use Google-style docstrings.
